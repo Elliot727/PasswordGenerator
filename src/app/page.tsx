@@ -26,7 +26,7 @@ const generateSecurePassword = (master: string, url: string, seed: string, prefi
 
   const hash = crypto.createHash('sha512').update(combined).digest('base64');
 
-  let password = prefix + hash.replace(/[+/=]/g, ''); 
+  let password = prefix + hash.replace(/[+/=]/g, ''); // Remove non-alphanumeric characters
   password = password.slice(0, keyLen);
 
   return ensureComplexity(password);
@@ -98,7 +98,7 @@ const PasswordGenerator = () => {
           <span className="tooltip">
             ⓘ
             <span className="tooltiptext">
-              Use a strong, unique master password that you don't use anywhere else.
+              Use a strong, unique master password that you don&apos;t use anywhere else.
             </span>
           </span>
         </label>
@@ -109,7 +109,7 @@ const PasswordGenerator = () => {
           <span className="tooltip">
             ⓘ
             <span className="tooltiptext">
-              Enter the website or service name for which you're generating the password.
+              Enter the website or service name for which you&apos;re generating the password.
             </span>
           </span>
         </label>
@@ -166,7 +166,6 @@ const PasswordGenerator = () => {
           </div>
         </div>
       )}
-      {error && <p className="error">{error}</p>}
     </div>
   );
 };
