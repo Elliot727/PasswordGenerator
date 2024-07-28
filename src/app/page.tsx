@@ -21,10 +21,9 @@ const generateSecurePassword = (master: string, url: string, seed: string, prefi
   const keyLen = size;
 
   const derivedKey = crypto.pbkdf2Sync(master, salt, iterations, keyLen, 'sha512');
-  const randomBytes = crypto.randomBytes(32);
-  const combined = Buffer.concat([derivedKey, randomBytes]);
 
-  const hash = crypto.createHash('sha512').update(combined).digest('base64');
+
+  const hash = crypto.createHash('sha512').update(derivedKey).digest('base64');
 
   let password = prefix + hash.replace(/[+/=]/g, ''); // Remove non-alphanumeric characters
   password = password.slice(0, keyLen);
