@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from 'react';
+import React, { FormEvent, useState, useEffect } from 'react';
 import crypto from 'crypto';
 
 export interface PasswordFormElements extends HTMLFormControlsCollection {
@@ -21,8 +21,6 @@ const generateSecurePassword = (master: string, url: string, seed: string, prefi
   const keyLen = size;
 
   const derivedKey = crypto.pbkdf2Sync(master, salt, iterations, keyLen, 'sha512');
-
-
   const hash = crypto.createHash('sha512').update(derivedKey).digest('base64');
 
   let password = prefix + hash.replace(/[+/=]/g, ''); // Remove non-alphanumeric characters
@@ -54,6 +52,10 @@ const PasswordGenerator = () => {
   const [password, setPassword] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+
+  useEffect(() => {
+    console.log('Loading state changed:', loading);
+  }, [loading]);
 
   const handleSubmit = async (event: FormEvent<PasswordForm>) => {
     event.preventDefault();
@@ -137,9 +139,9 @@ const PasswordGenerator = () => {
         <input type="text" id="prefix" name="prefix" />
 
         <label htmlFor="size">Password Length:</label>
-        <select id="size" name="size" required>
+        <select id="size" name="size" defaultValue="32" required>
           <option value="24">24 characters</option>
-          <option value="32" selected>32 characters</option>
+          <option value="32">32 characters</option>
           <option value="48">48 characters</option>
         </select>
 
@@ -151,7 +153,8 @@ const PasswordGenerator = () => {
           <p>Generating password...</p>
         </div>
       )}
-      {password && (
+      {error && <p className="error">{error}</p>}
+      {password && !loading && (
         <div className="password-container">
           <h2>Generated Password:</h2>
           <div className="password">
