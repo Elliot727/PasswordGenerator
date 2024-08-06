@@ -18,64 +18,54 @@ export interface PasswordForm extends HTMLFormElement {
 const generateSecurePassword = (master: string, url: string, seed: string, prefix: string, size: number): string => {
   const salt = Buffer.from(url + seed);
   const iterations = 200000;
-  const keyLen = size * 2; // Generate more bytes than needed to allow for special character insertion
+  const keyLen = size - prefix.length; // Adjust key length based on prefix
 
   const derivedKey = crypto.pbkdf2Sync(master, salt, iterations, keyLen, 'sha512');
-  let hash = derivedKey.toString('base64');
+  const hash = crypto.createHash('sha512').update(derivedKey).digest('base64');
 
+  // Include special characters in the character set
   const specialChars = '!@#$%^&*()_+-=[]{}|;:,.<>?';
   const alphanumeric = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const allChars = alphanumeric + specialChars;
 
   let password = prefix;
-  let specialCharCount = prefix.split('').filter(char => specialChars.includes(char)).length;
-  const desiredSpecialChars = Math.max(1, Math.floor(size / 8)); // Aim for about 1 special char per 8 characters
-
-  // Generate the password
-  while (password.length < size) {
-    const charIndex = parseInt(hash.substr(0, 2), 16);
-    hash = crypto.createHash('sha512').update(hash).digest('base64');
-
-    if (specialCharCount < desiredSpecialChars && charIndex % 8 === 0) {
-      // Insert a special character
-      const specialCharIndex = charIndex % specialChars.length;
-      password += specialChars[specialCharIndex];
-      specialCharCount++;
-    } else {
-      // Insert an alphanumeric character
-      const alphaNumIndex = charIndex % alphanumeric.length;
-      password += alphanumeric[alphaNumIndex];
-    }
+  
+  // Ensure at least one special character
+  if (!specialChars.split('').some(char => prefix.includes(char))) {
+    password += specialChars[Math.floor(Math.random() * specialChars.length)];
   }
 
-  return ensureComplexity(password, size, prefix);
+  // Fill the rest of the password
+  while (password.length < size) {
+    const charIndex = parseInt(hash.substr(0, 2), 16) % allChars.length;
+    password += allChars[charIndex];
+    hash = crypto.createHash('sha512').update(hash).digest('base64');
+  }
+
+  return ensureComplexity(password, size);
 };
 
-const ensureComplexity = (password: string, size: number, prefix: string): string => {
+const ensureComplexity = (password: string, size: number): string => {
   const requiredChars = [
-    { regex: /[A-Z]/, chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' },
-    { regex: /[a-z]/, chars: 'abcdefghijklmnopqrstuvwxyz' },
-    { regex: /[0-9]/, chars: '0123456789' },
-    { regex: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/, chars: '!@#$%^&*()_+-=[]{}|;:,.<>?' }
+    { regex: /[A-Z]/, char: 'A' },
+    { regex: /[a-z]/, char: 'a' },
+    { regex: /[0-9]/, char: '1' },
+    { regex: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/, char: '!' }
   ];
 
   let modifiedPassword = password;
 
-  requiredChars.forEach(({ regex, chars }) => {
+  requiredChars.forEach(({ regex, char }, index) => {
     if (!regex.test(modifiedPassword)) {
-      // Find a position to replace, preserving the prefix
-      let replaceIndex;
-      do {
-        replaceIndex = prefix.length + Math.floor(Math.random() * (modifiedPassword.length - prefix.length));
-      } while (regex.test(modifiedPassword[replaceIndex]));
-
-      // Replace with a random character from the required set
-      const newChar = chars[Math.floor(Math.random() * chars.length)];
-      modifiedPassword = modifiedPassword.slice(0, replaceIndex) + newChar + modifiedPassword.slice(replaceIndex + 1);
+      // Replace a character in the latter half of the password, preserving the prefix
+      const replaceIndex = Math.floor(modifiedPassword.length / 2) + index;
+      modifiedPassword = modifiedPassword.slice(0, replaceIndex) + char + modifiedPassword.slice(replaceIndex + 1);
     }
   });
 
   return modifiedPassword.slice(0, size); // Ensure the final length is correct
 };
+
 
 const PasswordGenerator = () => {
   const [password, setPassword] = useState<string>('');
