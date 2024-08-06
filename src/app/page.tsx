@@ -41,12 +41,12 @@ const ensureComplexity = (password: string): string => {
 
   requiredChars.forEach(({ regex, char }) => {
     if (!regex.test(modifiedPassword)) {
-      modifiedPassword = char + modifiedPassword.slice(1);
+      modifiedPassword += char; // Append the required character instead of replacing
     }
   });
 
   return modifiedPassword;
-};
+};};
 
 const PasswordGenerator = () => {
   const [password, setPassword] = useState<string>('');
