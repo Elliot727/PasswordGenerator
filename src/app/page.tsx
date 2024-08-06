@@ -16,36 +16,65 @@ export interface PasswordForm extends HTMLFormElement {
 }
 
 const generateSecurePassword = (master: string, url: string, seed: string, prefix: string, size: number): string => {
-  const salt = Buffer.from(url + seed + prefix);
+  const salt = Buffer.from(url + seed);
   const iterations = 200000;
-  const keyLen = size;
+  const keyLen = size * 2; // Generate more bytes than needed to allow for special character insertion
 
   const derivedKey = crypto.pbkdf2Sync(master, salt, iterations, keyLen, 'sha512');
-  const hash = crypto.createHash('sha512').update(derivedKey).digest('base64');
+  let hash = derivedKey.toString('base64');
 
-  let password = prefix + hash.replace(/[+/=]/g, ''); // Remove non-alphanumeric characters
-  password = password.slice(0, keyLen);
+  const specialChars = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+  const alphanumeric = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
-  return ensureComplexity(password);
+  let password = prefix;
+  let specialCharCount = prefix.split('').filter(char => specialChars.includes(char)).length;
+  const desiredSpecialChars = Math.max(1, Math.floor(size / 8)); // Aim for about 1 special char per 8 characters
+
+  // Generate the password
+  while (password.length < size) {
+    const charIndex = parseInt(hash.substr(0, 2), 16);
+    hash = crypto.createHash('sha512').update(hash).digest('base64');
+
+    if (specialCharCount < desiredSpecialChars && charIndex % 8 === 0) {
+      // Insert a special character
+      const specialCharIndex = charIndex % specialChars.length;
+      password += specialChars[specialCharIndex];
+      specialCharCount++;
+    } else {
+      // Insert an alphanumeric character
+      const alphaNumIndex = charIndex % alphanumeric.length;
+      password += alphanumeric[alphaNumIndex];
+    }
+  }
+
+  return ensureComplexity(password, size);
 };
 
-const ensureComplexity = (password: string): string => {
+const ensureComplexity = (password: string, size: number): string => {
   const requiredChars = [
-    { regex: /[A-Z]/, char: 'A' },
-    { regex: /[a-z]/, char: 'a' },
-    { regex: /[0-9]/, char: '1' },
-    { regex: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/, char: '!' }
+    { regex: /[A-Z]/, chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' },
+    { regex: /[a-z]/, chars: 'abcdefghijklmnopqrstuvwxyz' },
+    { regex: /[0-9]/, chars: '0123456789' },
+    { regex: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/, chars: '!@#$%^&*()_+-=[]{}|;:,.<>?' }
   ];
 
   let modifiedPassword = password;
 
-  requiredChars.forEach(({ regex, char }) => {
+  requiredChars.forEach(({ regex, chars }) => {
     if (!regex.test(modifiedPassword)) {
-      modifiedPassword += char; // Append the required character instead of replacing
+      // Find a position to replace, preserving the prefix
+      let replaceIndex;
+      do {
+        replaceIndex = crypto.randomInt(prefix.length, modifiedPassword.length);
+      } while (regex.test(modifiedPassword[replaceIndex]));
+
+      // Replace with a random character from the required set
+      const newChar = chars[crypto.randomInt(chars.length)];
+      modifiedPassword = modifiedPassword.slice(0, replaceIndex) + newChar + modifiedPassword.slice(replaceIndex + 1);
     }
   });
 
-  return modifiedPassword;
+  return modifiedPassword.slice(0, size); // Ensure the final length is correct
 };
 
 const PasswordGenerator = () => {
