@@ -46,7 +46,7 @@ const ensureComplexity = (password: string): string => {
   });
 
   return modifiedPassword;
-};};
+};
 
 const PasswordGenerator = () => {
   const [password, setPassword] = useState<string>('');
