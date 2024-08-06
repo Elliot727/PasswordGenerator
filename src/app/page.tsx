@@ -47,10 +47,10 @@ const generateSecurePassword = (master: string, url: string, seed: string, prefi
     }
   }
 
-  return ensureComplexity(password, size);
+  return ensureComplexity(password, size, prefix);
 };
 
-const ensureComplexity = (password: string, size: number): string => {
+const ensureComplexity = (password: string, size: number, prefix: string): string => {
   const requiredChars = [
     { regex: /[A-Z]/, chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' },
     { regex: /[a-z]/, chars: 'abcdefghijklmnopqrstuvwxyz' },
@@ -65,11 +65,11 @@ const ensureComplexity = (password: string, size: number): string => {
       // Find a position to replace, preserving the prefix
       let replaceIndex;
       do {
-        replaceIndex = crypto.randomInt(prefix.length, modifiedPassword.length);
+        replaceIndex = prefix.length + Math.floor(Math.random() * (modifiedPassword.length - prefix.length));
       } while (regex.test(modifiedPassword[replaceIndex]));
 
       // Replace with a random character from the required set
-      const newChar = chars[crypto.randomInt(chars.length)];
+      const newChar = chars[Math.floor(Math.random() * chars.length)];
       modifiedPassword = modifiedPassword.slice(0, replaceIndex) + newChar + modifiedPassword.slice(replaceIndex + 1);
     }
   });
