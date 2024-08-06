@@ -21,7 +21,7 @@ const generateSecurePassword = (master: string, url: string, seed: string, prefi
   const keyLen = size - prefix.length; // Adjust key length based on prefix
 
   const derivedKey = crypto.pbkdf2Sync(master, salt, iterations, keyLen, 'sha512');
-  const hash = crypto.createHash('sha512').update(derivedKey).digest('base64');
+  let hash = crypto.createHash('sha512').update(derivedKey).digest('base64');
 
   // Include special characters in the character set
   const specialChars = '!@#$%^&*()_+-=[]{}|;:,.<>?';
